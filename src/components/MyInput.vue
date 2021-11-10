@@ -3,6 +3,7 @@
     <label :for="id">{{ label }}</label>
     <input
       class="input"
+      :class="{ 'input--error': hasError }"
       type="text"
       :id="id"
       :placeholder="placeholder"
@@ -19,6 +20,10 @@ export default {
     label: String,
     placeholder: String,
     value: String,
+    hasError: Boolean,
+  },
+  beforeDestroy() {
+    this.$emit("input", "");
   },
   methods: {
     inputHandler(value) {
@@ -45,5 +50,9 @@ export default {
   border-radius: 5px;
   outline: 0;
   /* background-color: transparent; */
+}
+
+.input--error {
+  border: 1px solid red;
 }
 </style>

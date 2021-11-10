@@ -1,11 +1,26 @@
 <template>
-  <form autocomplete="off" class="form">
+  <form autocomplete="off" class="form" @submit.prevent="onSubmitForm">
     <h2>Личные данные</h2>
 
     <div class="subform-row">
-      <my-input id="surname" label="Фамилия" v-model="formData.surname" />
-      <my-input id="name" label="Имя" v-model="formData.name" />
-      <my-input id="midname" label="Отчество" v-model="formData.midname" />
+      <my-input
+        id="surname"
+        label="Фамилия"
+        v-model.trim="formData.surname"
+        :hasError="$v.formData.surname.$error"
+      />
+      <my-input
+        id="name"
+        label="Имя"
+        v-model.trim="formData.name"
+        :hasError="$v.formData.name.$error"
+      />
+      <my-input
+        id="midname"
+        label="Отчество"
+        v-model.trim="formData.midname"
+        :hasError="$v.formData.midname.$error"
+      />
     </div>
 
     <div class="subform-row">
@@ -13,13 +28,16 @@
         id="date-birth"
         label="Дата рождения"
         v-model="formData.dateBirth"
+        :hasError="$v.formData.dateBirth.$error"
         placeholder="дд.мм.гггг"
+        v-mask="'##.##.####'"
       />
 
       <my-input
         id="email"
         label="E-mail"
         v-model="formData.email"
+        :hasError="$v.formData.email.$error"
         placeholder="example@email.com"
       />
     </div>
@@ -50,6 +68,7 @@
     <div class="row">
       <dropdown>
         <!-- TODO чтобы дропдаун был открыт при любом изменении инпута -->
+        <!-- TODO иконку в дропдаун -->
         <template #dropdown-toggle>
           <my-input
             id="citizenship"
@@ -79,17 +98,25 @@
         id="passport-rf_series"
         label="Серия паспорта"
         v-model="formData.passportRf.series"
+        :hasError="$v.formData.passportRf.series.$error"
+        placeholder="1111"
+        v-mask="'####'"
       />
       <my-input
         id="passport-rf_number"
         label="Номер паспорта"
         v-model="formData.passportRf.number"
+        :hasError="$v.formData.passportRf.number.$error"
+        placeholder="111111"
+        v-mask="'######'"
       />
       <my-input
         id="passport-rf_issue-date"
         label="Дата выдачи"
         v-model="formData.passportRf.dateIssue"
+        :hasError="$v.formData.passportRf.dateIssue.$error"
         placeholder="дд.мм.гггг"
+        v-mask="'##.##.####'"
       />
     </div>
 
@@ -104,11 +131,13 @@
           id="foreign_surname"
           label="Фамилия на латинице"
           v-model="formData.passportForeign.surnameLatin"
+          :hasError="$v.formData.passportForeign.surnameLatin.$error"
         />
         <my-input
           id="foreign_name"
           label="Имя на латинице"
           v-model="formData.passportForeign.nameLatin"
+          :hasError="$v.formData.passportForeign.nameLatin.$error"
         />
       </div>
       <p>Иностранцы заполняют латинскими буквами. Например, Ivanov Ivan</p>
@@ -193,16 +222,31 @@
         id="surname-changed"
         label="Фамилия"
         v-model="formData.surnameChanged"
+        :hasError="$v.formData.surnameChanged.$error"
       />
-      <my-input id="name-changed" label="Имя" v-model="formData.nameChanged" />
+      <my-input
+        id="name-changed"
+        label="Имя"
+        v-model="formData.nameChanged"
+        :hasError="$v.formData.nameChanged.$error"
+      />
     </div>
-    <button @click.prevent="onButtonClicked">Отправить</button>
+    <button type="submit" class="btn">Отправить</button>
   </form>
 </template>
 
 <script>
 import MyInput from "./MyInput.vue";
 import Dropdown from "./Dropdown.vue";
+import { VueMaskDirective } from "v-mask";
+import { validationMixin } from "vuelidate";
+import { email, alpha, required } from "vuelidate/lib/validators";
+import {
+  cyrillicAlpha,
+  passportSeries,
+  passportNumber,
+  dateDDMMYYYY,
+} from "../utils/customValidators.js";
 import { debounce } from "../utils/debounce.js";
 import { emojiToString } from "../utils/emojiToString.js";
 import citizenships from "../assets/data/citizenships.json";
@@ -215,6 +259,7 @@ export default {
     MyInput,
     Dropdown,
   },
+  mixins: [validationMixin],
   data() {
     return {
       citizenships,
@@ -246,7 +291,7 @@ export default {
           country: "",
           type: "",
         },
-        isFullNameChanged: "",
+        isFullNameChanged: false,
         surnameChanged: "",
         nameChanged: "",
       },
@@ -283,7 +328,7 @@ export default {
     const countryCodesString = countryCodesEmoji.map((flag) =>
       emojiToString(flag)
     );
-    // записываем в countriesList названия стран на русском (по алфавиту)
+    // записываем в countriesList названия стран на русском
     // (выходит на 2 страны меньше, чем в исходнике, ввиду повторов в citizenships.json)
     allCountriesRu.forEach((country) => {
       if (country.code) {
@@ -307,16 +352,81 @@ export default {
     selectedPassportType(item) {
       this.formData.passportForeign.type = item.type;
     },
-    onButtonClicked() {
-      console.log(JSON.stringify(this.formData));
+    onSubmitForm() {
+      console.log("Here comes the Submit!");
+      this.$v.$touch();
+      if (this.$v.$invalid) {
+        console.log("Some errors");
+      } else {
+        console.log(JSON.stringify(this.formData));
+      }
     },
     getCitizenships(inputValue) {
-      // console.log("fetch countries", inputValue);
       this.formData.citizenship = inputValue;
     },
     getCountriesOfIssue(inputValue) {
       this.formData.passportForeign.country = inputValue;
-      console.log("fetch countries", inputValue);
+    },
+    onChangeFullnameChanged() {
+      if (!this.formData.isFullNameChanged) {
+        this.formData.surnameChanged = "";
+        this.formData.surnameChanged = "";
+      }
+    },
+  },
+  directives: {
+    mask: VueMaskDirective,
+  },
+  validations: {
+    formData: {
+      surname: {
+        cyrillicAlpha,
+        required,
+      },
+      name: {
+        cyrillicAlpha,
+        required,
+      },
+      midname: {
+        cyrillicAlpha,
+        required,
+      },
+      dateBirth: {
+        dateDDMMYYYY,
+        required,
+      },
+      email: {
+        email,
+        required,
+      },
+
+      passportRf: {
+        series: {
+          passportSeries,
+        },
+        number: {
+          passportNumber,
+        },
+        dateIssue: {
+          dateDDMMYYYY,
+        },
+      },
+
+      passportForeign: {
+        surnameLatin: {
+          alpha,
+        },
+        nameLatin: {
+          alpha,
+        },
+      },
+
+      surnameChanged: {
+        cyrillicAlpha,
+      },
+      nameChanged: {
+        cyrillicAlpha,
+      },
     },
   },
 };
@@ -336,5 +446,21 @@ export default {
 }
 .row {
   display: inline-flex;
+}
+.btn {
+  display: flex;
+  margin: auto;
+  max-width: 165px;
+  height: 40px;
+  padding: 20px;
+  align-items: center;
+  background-color: #a3a4a8;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.btn:hover {
+  background-color: #5e5e63;
+  color: white;
 }
 </style>
