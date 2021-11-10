@@ -240,9 +240,15 @@ import MyInput from "./MyInput.vue";
 import Dropdown from "./Dropdown.vue";
 import { VueMaskDirective } from "v-mask";
 import { validationMixin } from "vuelidate";
-import { email, alpha, required } from "vuelidate/lib/validators";
 import {
-  cyrillicAlpha,
+  helpers,
+  email,
+  alpha,
+  required,
+  requiredIf,
+} from "vuelidate/lib/validators";
+import {
+  // cyrillicAlpha,
   passportSeries,
   passportNumber,
   dateDDMMYYYY,
@@ -253,6 +259,8 @@ import citizenships from "../assets/data/citizenships.json";
 import passportTypes from "../assets/data/passport-types.json";
 import allCountriesRu from "../assets/data/all-countries-ru.json";
 // API словаря стран: https://support.travelpayouts.com/hc/ru/articles/360018907280-%D0%94%D0%B0%D0%BD%D0%BD%D1%8B%D0%B5-%D0%B2-JSON-%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%82%D0%B5
+const cyril = helpers.regex("cyril", /^[а-яА-ЯёЁ]+$/);
+// const mustBeCool = (value) => !helpers.req(value) || value.indexOf('cool') >= 0
 
 export default {
   components: {
@@ -367,12 +375,12 @@ export default {
     getCountriesOfIssue(inputValue) {
       this.formData.passportForeign.country = inputValue;
     },
-    onChangeFullnameChanged() {
-      if (!this.formData.isFullNameChanged) {
-        this.formData.surnameChanged = "";
-        this.formData.surnameChanged = "";
-      }
-    },
+    // onChangeFullnameChanged() {
+    //   if (!this.formData.isFullNameChanged) {
+    //     this.formData.surnameChanged = "";
+    //     this.formData.surnameChanged = "";
+    //   }
+    // },
   },
   directives: {
     mask: VueMaskDirective,
@@ -380,15 +388,15 @@ export default {
   validations: {
     formData: {
       surname: {
-        cyrillicAlpha,
+        cyril,
         required,
       },
       name: {
-        cyrillicAlpha,
+        cyril,
         required,
       },
       midname: {
-        cyrillicAlpha,
+        cyril,
         required,
       },
       dateBirth: {
@@ -403,29 +411,56 @@ export default {
       passportRf: {
         series: {
           passportSeries,
+          required: requiredIf(function () {
+            return this.formData.citizenship === "Россия";
+          }),
         },
         number: {
           passportNumber,
+          required: requiredIf(function () {
+            return this.formData.citizenship === "Россия";
+          }),
         },
         dateIssue: {
           dateDDMMYYYY,
+          required: requiredIf(function () {
+            return this.formData.citizenship === "Россия";
+          }),
         },
       },
 
       passportForeign: {
         surnameLatin: {
           alpha,
+          required: requiredIf(function () {
+            return (
+              this.formData.citizenship !== "Россия" &&
+              this.formData.citizenship !== undefined
+            );
+          }),
         },
         nameLatin: {
           alpha,
+          required: requiredIf(function () {
+            return (
+              this.formData.citizenship !== "Россия" &&
+              this.formData.citizenship !== undefined
+            );
+          }),
         },
       },
 
       surnameChanged: {
-        cyrillicAlpha,
+        cyril,
+        required: requiredIf(function () {
+          return this.formData.isFullNameChanged === "true";
+        }),
       },
       nameChanged: {
-        cyrillicAlpha,
+        cyril,
+        required: requiredIf(function () {
+          return this.formData.isFullNameChanged === "true";
+        }),
       },
     },
   },
