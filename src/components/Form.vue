@@ -67,8 +67,6 @@
 
     <div class="row">
       <dropdown>
-        <!-- TODO чтобы дропдаун был открыт при любом изменении инпута -->
-        <!-- TODO иконку в дропдаун -->
         <template #dropdown-toggle>
           <my-input
             id="citizenship"
@@ -140,7 +138,9 @@
           :hasError="$v.formData.passportForeign.nameLatin.$error"
         />
       </div>
-      <p>Иностранцы заполняют латинскими буквами. Например, Ivanov Ivan</p>
+      <small class="small-row"
+        >Иностранцы заполняют латинскими буквами. Например, Ivanov Ivan</small
+      >
 
       <div class="subform-row">
         <my-input
@@ -240,15 +240,10 @@ import MyInput from "./MyInput.vue";
 import Dropdown from "./Dropdown.vue";
 import { VueMaskDirective } from "v-mask";
 import { validationMixin } from "vuelidate";
+import * as _ from "lodash";
+import { email, alpha, required, requiredIf } from "vuelidate/lib/validators";
 import {
-  helpers,
-  email,
-  alpha,
-  required,
-  requiredIf,
-} from "vuelidate/lib/validators";
-import {
-  // cyrillicAlpha,
+  cyrillicAlpha,
   passportSeries,
   passportNumber,
   dateDDMMYYYY,
@@ -259,8 +254,6 @@ import citizenships from "../assets/data/citizenships.json";
 import passportTypes from "../assets/data/passport-types.json";
 import allCountriesRu from "../assets/data/all-countries-ru.json";
 // API словаря стран: https://support.travelpayouts.com/hc/ru/articles/360018907280-%D0%94%D0%B0%D0%BD%D0%BD%D1%8B%D0%B5-%D0%B2-JSON-%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%82%D0%B5
-const cyril = helpers.regex("cyril", /^[а-яА-ЯёЁ]+$/);
-// const mustBeCool = (value) => !helpers.req(value) || value.indexOf('cool') >= 0
 
 export default {
   components: {
@@ -283,7 +276,7 @@ export default {
         midname: "",
         dateBirth: "",
         email: "",
-        sex: "",
+        sex: "male",
         citizenship: undefined,
 
         passportRf: {
@@ -364,9 +357,9 @@ export default {
       console.log("Here comes the Submit!");
       this.$v.$touch();
       if (this.$v.$invalid) {
-        console.log("Some errors");
+        console.log("Please fill correctly red-marked fields");
       } else {
-        console.log(JSON.stringify(this.formData));
+        console.log(JSON.stringify(_.omitBy(this.formData, _.isEmpty)));
       }
     },
     getCitizenships(inputValue) {
@@ -375,12 +368,6 @@ export default {
     getCountriesOfIssue(inputValue) {
       this.formData.passportForeign.country = inputValue;
     },
-    // onChangeFullnameChanged() {
-    //   if (!this.formData.isFullNameChanged) {
-    //     this.formData.surnameChanged = "";
-    //     this.formData.surnameChanged = "";
-    //   }
-    // },
   },
   directives: {
     mask: VueMaskDirective,
@@ -388,15 +375,15 @@ export default {
   validations: {
     formData: {
       surname: {
-        cyril,
+        cyrillicAlpha,
         required,
       },
       name: {
-        cyril,
+        cyrillicAlpha,
         required,
       },
       midname: {
-        cyril,
+        cyrillicAlpha,
         required,
       },
       dateBirth: {
@@ -451,13 +438,13 @@ export default {
       },
 
       surnameChanged: {
-        cyril,
+        cyrillicAlpha,
         required: requiredIf(function () {
           return this.formData.isFullNameChanged === "true";
         }),
       },
       nameChanged: {
-        cyril,
+        cyrillicAlpha,
         required: requiredIf(function () {
           return this.formData.isFullNameChanged === "true";
         }),
@@ -481,6 +468,10 @@ export default {
 }
 .row {
   display: inline-flex;
+}
+.small-row {
+  display: inline-block;
+  margin-bottom: 20px;
 }
 .btn {
   display: flex;

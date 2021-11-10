@@ -1,8 +1,6 @@
 const cyrillicAlpha = (value) => !value || /^[а-яА-ЯёЁ]+$/.test(value);
 const passportSeries = (value) => !value || /^\d{4}$/.test(value);
 const passportNumber = (value) => !value || /^\d{6}$/.test(value);
-// const empty = (value) => value === '';
-// заглушка для того, чтобы проходила валидация, когда инпут размонтирован
 const dateDDMMYYYY = (value) => {
   const dateValidate = () => {
     // проверяем, что маска заполнена (используется v-mask)

@@ -49,7 +49,6 @@ export default {
   border: 2px solid #d4d9e2;
   border-radius: 5px;
   outline: 0;
-  /* background-color: transparent; */
 }
 
 .input--error {
