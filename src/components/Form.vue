@@ -49,16 +49,18 @@
 
     <div class="row">
       <dropdown>
+        <!-- TODO чтобы дропдаун был открыт при любом изменении инпута -->
         <template #dropdown-toggle>
           <my-input
             id="citizenship"
             label="Гражданство"
-            v-model="formData.citizenship"
+            :value="formData.citizenship"
+            @input="debouncedCitizenships"
           />
         </template>
         <template #dropdown-items>
           <div
-            v-for="item in countriesList"
+            v-for="item in filteredCitizenships"
             :key="item + countriesList.indexOf(item)"
             class="dropdown-item"
             @click="selectedCitizenship(item)"
@@ -124,12 +126,13 @@
               <my-input
                 id="passport-foreign_country"
                 label="Страна выдачи"
-                v-model="formData.passportForeign.country"
+                :value="formData.passportForeign.country"
+                @input="debouncedCountriesOfIssue"
               />
             </template>
             <template #dropdown-items>
               <div
-                v-for="item in countriesList"
+                v-for="item in filteredCountriesOfIssue"
                 :key="item + countriesList.indexOf(item)"
                 class="dropdown-item"
                 @click="selectedCountry(item)"
@@ -200,6 +203,8 @@
 <script>
 import MyInput from "./MyInput.vue";
 import Dropdown from "./Dropdown.vue";
+import { debounce } from "../utils/debounce.js";
+import { emojiToString } from "../utils/emojiToString.js";
 import citizenships from "../assets/data/citizenships.json";
 import passportTypes from "../assets/data/passport-types.json";
 import allCountriesRu from "../assets/data/all-countries-ru.json";
@@ -216,6 +221,9 @@ export default {
       passportTypes,
       allCountriesRu,
       countriesList: [],
+      debouncedCitizenships: null,
+      debouncedCountriesOfIssue: null,
+
       formData: {
         surname: "",
         name: "",
@@ -245,6 +253,20 @@ export default {
     };
   },
   computed: {
+    filteredCitizenships() {
+      if (this.formData.citizenship) {
+        return this.countriesList.filter((country) => {
+          return country.indexOf(this.formData.citizenship) > -1;
+        });
+      } else return this.countriesList;
+    },
+    filteredCountriesOfIssue() {
+      if (this.formData.passportForeign.country) {
+        return this.countriesList.filter((country) => {
+          return country.indexOf(this.formData.passportForeign.country) > -1;
+        });
+      } else return this.countriesList;
+    },
     showFullNameChanged() {
       return this.formData.isFullNameChanged === "true";
     },
@@ -259,10 +281,10 @@ export default {
     });
     // преобразуем флаги в строковые значения для последующего маппинга со списком стран
     const countryCodesString = countryCodesEmoji.map((flag) =>
-      this.emojiToString(flag)
+      emojiToString(flag)
     );
     // записываем в countriesList названия стран на русском (по алфавиту)
-    // (выходит на 2 страны меньше ввиду повторов в citizenships.json)
+    // (выходит на 2 страны меньше, чем в исходнике, ввиду повторов в citizenships.json)
     allCountriesRu.forEach((country) => {
       if (country.code) {
         if (countryCodesString.includes(country.code)) {
@@ -270,7 +292,10 @@ export default {
         }
       }
     });
+    // Сортируем список стран и записываем дебаунс в переменную-обработчик инпута
     this.countriesList.sort();
+    this.debouncedCitizenships = debounce(this.getCitizenships, 500);
+    this.debouncedCountriesOfIssue = debounce(this.getCountriesOfIssue, 500);
   },
   methods: {
     selectedCitizenship(item) {
@@ -285,14 +310,13 @@ export default {
     onButtonClicked() {
       console.log(JSON.stringify(this.formData));
     },
-    // TODO вынести emojiToString в utils
-    emojiToString(flag) {
-      // преобразует emoji флага в строку - буквенный код страны.
-      // обратный метод:
-      // flag.toUpperCase().replace(/./g, char => String.fromCodePoint(char.charCodeAt(0)+127397) );
-      return flag.replace(/../g, (cp) =>
-        String.fromCharCode(cp.codePointAt(0) - 127397)
-      );
+    getCitizenships(inputValue) {
+      // console.log("fetch countries", inputValue);
+      this.formData.citizenship = inputValue;
+    },
+    getCountriesOfIssue(inputValue) {
+      this.formData.passportForeign.country = inputValue;
+      console.log("fetch countries", inputValue);
     },
   },
 };
@@ -305,13 +329,11 @@ export default {
   row-gap: 20px;
   padding: 10px;
 }
-
 .subform-row {
   display: flex;
   width: 100%;
   column-gap: 20px;
 }
-
 .row {
   display: inline-flex;
 }

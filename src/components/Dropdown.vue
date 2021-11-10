@@ -15,11 +15,6 @@ export default {
   directives: {
     ClickOutside,
   },
-  //   props: {
-  //     id: String,
-  //     label: String,
-  //     placeholder: String,
-  //   },
   data: () => ({
     isOpened: false,
   }),
