@@ -10,6 +10,7 @@
       :value="value"
       @input="inputHandler($event.target.value)"
     />
+    <small class="errorText" v-if="hasError"> {{ errorText }} </small>
   </div>
 </template>
 
@@ -21,6 +22,7 @@ export default {
     placeholder: String,
     value: String,
     hasError: Boolean,
+    errorText: String,
   },
   beforeDestroy() {
     this.$emit("input", "");
@@ -53,5 +55,9 @@ export default {
 
 .input--error {
   border: 1px solid red;
+}
+
+.errorText {
+  color: red;
 }
 </style>

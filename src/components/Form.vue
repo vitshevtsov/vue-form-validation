@@ -8,18 +8,21 @@
         label="Фамилия"
         v-model.trim="formData.surname"
         :hasError="$v.formData.surname.$error"
+        :errorText="'Укажите фамилию на кириллице'"
       />
       <my-input
         id="name"
         label="Имя"
         v-model.trim="formData.name"
         :hasError="$v.formData.name.$error"
+        :errorText="'Укажите имя на кириллице'"
       />
       <my-input
         id="midname"
         label="Отчество"
         v-model.trim="formData.midname"
         :hasError="$v.formData.midname.$error"
+        :errorText="'Укажите отчество на кириллице'"
       />
     </div>
 
@@ -29,6 +32,7 @@
         label="Дата рождения"
         v-model="formData.dateBirth"
         :hasError="$v.formData.dateBirth.$error"
+        :errorText="'Укажите валидную дату (не позднее текущей)'"
         placeholder="дд.мм.гггг"
         v-mask="'##.##.####'"
       />
@@ -38,6 +42,7 @@
         label="E-mail"
         v-model="formData.email"
         :hasError="$v.formData.email.$error"
+        :errorText="'Укажите валидный email-адрес'"
         placeholder="example@email.com"
       />
     </div>
@@ -97,6 +102,7 @@
         label="Серия паспорта"
         v-model="formData.passportRf.series"
         :hasError="$v.formData.passportRf.series.$error"
+        :errorText="'Укажите 4 цифры'"
         placeholder="1111"
         v-mask="'####'"
       />
@@ -105,6 +111,7 @@
         label="Номер паспорта"
         v-model="formData.passportRf.number"
         :hasError="$v.formData.passportRf.number.$error"
+        :errorText="'Укажите 6 цифр'"
         placeholder="111111"
         v-mask="'######'"
       />
@@ -113,6 +120,7 @@
         label="Дата выдачи"
         v-model="formData.passportRf.dateIssue"
         :hasError="$v.formData.passportRf.dateIssue.$error"
+        :errorText="'Укажите валидную дату (не позднее текущей)'"
         placeholder="дд.мм.гггг"
         v-mask="'##.##.####'"
       />
@@ -130,12 +138,14 @@
           label="Фамилия на латинице"
           v-model="formData.passportForeign.surnameLatin"
           :hasError="$v.formData.passportForeign.surnameLatin.$error"
+          :errorText="'Укажите фамилию на латинице'"
         />
         <my-input
           id="foreign_name"
           label="Имя на латинице"
           v-model="formData.passportForeign.nameLatin"
           :hasError="$v.formData.passportForeign.nameLatin.$error"
+          :errorText="'Укажите имя на латинице'"
         />
       </div>
       <small class="small-row"
@@ -223,12 +233,14 @@
         label="Фамилия"
         v-model="formData.surnameChanged"
         :hasError="$v.formData.surnameChanged.$error"
+        :errorText="'Укажите фамилию на кириллице'"
       />
       <my-input
         id="name-changed"
         label="Имя"
         v-model="formData.nameChanged"
         :hasError="$v.formData.nameChanged.$error"
+        :errorText="'Укажите фамилию на кириллице'"
       />
     </div>
     <button type="submit" class="btn">Отправить</button>
@@ -240,7 +252,8 @@ import MyInput from "./MyInput.vue";
 import Dropdown from "./Dropdown.vue";
 import { VueMaskDirective } from "v-mask";
 import { validationMixin } from "vuelidate";
-import * as _ from "lodash";
+import omitBy from "lodash/omitBy";
+import isEmpty from "lodash/isEmpty";
 import { email, alpha, required, requiredIf } from "vuelidate/lib/validators";
 import {
   cyrillicAlpha,
@@ -254,6 +267,33 @@ import citizenships from "../assets/data/citizenships.json";
 import passportTypes from "../assets/data/passport-types.json";
 import allCountriesRu from "../assets/data/all-countries-ru.json";
 // API словаря стран: https://support.travelpayouts.com/hc/ru/articles/360018907280-%D0%94%D0%B0%D0%BD%D0%BD%D1%8B%D0%B5-%D0%B2-JSON-%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%82%D0%B5
+
+const formData = {
+  surname: "",
+  name: "",
+  midname: "",
+  dateBirth: "",
+  email: "",
+  sex: "male",
+  citizenship: undefined,
+
+  passportRf: {
+    series: "",
+    number: "",
+    dateIssue: "",
+  },
+
+  passportForeign: {
+    surnameLatin: "",
+    nameLatin: "",
+    number: "",
+    country: "",
+    type: "",
+  },
+  isFullNameChanged: false,
+  surnameChanged: "",
+  nameChanged: "",
+};
 
 export default {
   components: {
@@ -269,47 +309,29 @@ export default {
       countriesList: [],
       debouncedCitizenships: null,
       debouncedCountriesOfIssue: null,
-
-      formData: {
-        surname: "",
-        name: "",
-        midname: "",
-        dateBirth: "",
-        email: "",
-        sex: "male",
-        citizenship: undefined,
-
-        passportRf: {
-          series: "",
-          number: "",
-          dateIssue: "",
-        },
-
-        passportForeign: {
-          surnameLatin: "",
-          nameLatin: "",
-          number: "",
-          country: "",
-          type: "",
-        },
-        isFullNameChanged: false,
-        surnameChanged: "",
-        nameChanged: "",
-      },
+      formData,
     };
   },
   computed: {
     filteredCitizenships() {
       if (this.formData.citizenship) {
         return this.countriesList.filter((country) => {
-          return country.indexOf(this.formData.citizenship) > -1;
+          return (
+            country
+              .toLowerCase()
+              .indexOf(this.formData.citizenship.toLowerCase()) > -1
+          );
         });
       } else return this.countriesList;
     },
     filteredCountriesOfIssue() {
       if (this.formData.passportForeign.country) {
         return this.countriesList.filter((country) => {
-          return country.indexOf(this.formData.passportForeign.country) > -1;
+          return (
+            country
+              .toLowerCase()
+              .indexOf(this.formData.passportForeign.country.toLowerCase()) > -1
+          );
         });
       } else return this.countriesList;
     },
@@ -359,7 +381,7 @@ export default {
       if (this.$v.$invalid) {
         console.log("Please fill correctly red-marked fields");
       } else {
-        console.log(JSON.stringify(_.omitBy(this.formData, _.isEmpty)));
+        console.log(JSON.stringify(omitBy(this.formData, isEmpty)));
       }
     },
     getCitizenships(inputValue) {
@@ -472,6 +494,7 @@ export default {
 .small-row {
   display: inline-block;
   margin-bottom: 20px;
+  margin-top: 10px;
 }
 .btn {
   display: flex;
